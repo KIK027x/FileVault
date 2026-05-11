@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>🖼️ Галерея изображений</h2>
+
+<div class="row g-3">
+    {% for file in files %}
+    <div class="col-md-4">
+        <div class="card h-100">
+            <img src="{{ url_for('static', filename='uploads/' + file.filename) }}" class="card-img-top" alt="{{ file.original_name }}" style="height: 200px; object-fit: cover;">
+            <div class="card-body">
+                <h6 class="card-title">{{ file.original_name }}</h6>
+                <small class="text-muted">{{ "%.2f"|format(file.size / 1024 / 1024) }} MB</small>
+                <div class="mt-2">
+                    <a href="{{ url_for('files.download_file', file_id=file.id) }}" class="btn btn-sm btn-outline-primary">Скачать</a>
+                    <form method="POST" action="{{ url_for('files.delete_file', file_id=file.id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить?')">
+                            Удалить
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <p>Нет изображений для отображения.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

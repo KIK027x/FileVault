@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Результаты поиска: "{{ query }}"</h2>
+
+{% if files %}
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th>Имя</th>
+            <th>Размер</th>
+            <th>Дата</th>
+            <th>Папка</th>
+            <th>Теги</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for file in files %}
+        <tr>
+            <td>{{ file.original_name }}</td>
+            <td>{{ "%.2f"|format(file.size / 1024 / 1024) }} МБ</td>
+            <td>{{ file.upload_date.strftime('%d.%m') }}</td>
+            <td>{{ file.folder.name if file.folder else 'Корень' }}</td>
+            <td>
+                {% for tag in file.tags %}
+                    <span class="badge bg-secondary">{{ tag.name }}</span>
+                {% endfor %}
+            </td>
+            <td>
+                <a href="{{ url_for('files.download_file', file_id=file.id) }}" class="btn btn-sm btn-outline-primary">Скачать</a>
+                {% if file.mime_type.startswith('text/') %}
+                <a href="{{ url_for('files.view_file', file_id=file.id) }}" class="btn btn-sm btn-outline-info">Просмотр</a>
+                {% endif %}
+                <form method="POST" action="{{ url_for('files.delete_file', file_id=file.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить?')">
+                        Удалить
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">
+    Ничего не найдено.
+</div>
+{% endif %}
+{% endblock %}

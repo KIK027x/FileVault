@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5>{{ file.original_name }}</h5>
+    </div>
+    <div class="card-body">
+        <pre class="bg-light p-3">{{ content }}</pre>
+    </div>
+    <div class="card-footer">
+        <a href="{{ url_for('files.download_file', file_id=file.id) }}" class="btn btn-outline-primary">Скачать</a>
+        <a href="{{ url_for('files.dashboard', folder=file.folder_id) }}" class="btn btn-outline-secondary">Назад</a>
+    </div>
+</div>
+{% endblock %}

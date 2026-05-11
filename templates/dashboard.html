@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="text-dark">📁 Файловый менеджер</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+        Загрузить файл
+    </button>
+</div>
+
+<!-- Поиск -->
+<form class="mb-4" method="GET" action="{{ url_for('files.search') }}">
+    <div class="input-group">
+        <input type="text" name="q" class="form-control" placeholder="Поиск файлов..." value="{{ request.args.get('q', '') }}">
+        <button class="btn btn-outline-secondary" type="submit">🔍</button>
+    </div>
+</form>
+
+<!-- Хлебные крошки -->
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb bg-light rounded p-2">
+        <li class="breadcrumb-item"><a href="{{ url_for('files.dashboard') }}">Корень</a></li>
+        {% for fid, name in breadcrumbs %}
+            <li class="breadcrumb-item">{{ name }}</li>
+        {% endfor %}
+    </ol>
+</nav>
+
+<!-- Создать папку -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('files.create_folder') }}">
+            <input type="hidden" name="parent_id" value="{{ current_folder.id if current_folder else '' }}">
+            <div class="input-group">
+                <input type="text" class="form-control" name="folder_name" placeholder="Название папки" required>
+                <button class="btn btn-outline-secondary" type="submit">Создать</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Недавние файлы -->
+{% if recent_files %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5>
+            <a href="#" class="text-decoration-none" onclick="toggleRecentFiles(); return false;">📅 Недавние файлы</a>
+        </h5>
+    </div>
+    <div id="recent-files-list" class="card-body collapse show">
+        <ul class="list-unstyled">
+            {% for file in recent_files[:10] %}
+            <li>
+                <a href="{{ url_for('files.download_file', file_id=file.id) }}">{{ file.original_name }}</a>
+                <small class="text-muted">({{ "%.2f"|format(file.size / 1024 / 1024) }} MB)</small>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+<script>
+function toggleRecentFiles() {
+    var element = document.getElementById('recent-files-list');
+    if (element.classList.contains('show')) {
+        element.classList.remove('show');
+    } else {
+        element.classList.add('show');
+    }
+}
+</script>
+{% endif %}
+
+<!-- Папки -->
+{% if folders %}
+<h4>📁 Папки</h4>
+<div class="row g-3">
+    {% for folder in folders %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border-0 shadow-sm hover-effect">
+            <div class="card-body d-flex align-items-center p-3">
+                <div class="me-3">
+                    <i class="bi bi-folder fs-2 text-primary"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0">
+                        <a href="{{ url_for('files.dashboard', folder=folder.id) }}" class="text-decoration-none">{{ folder.name }}</a>
+                    </h6>
+                    <small class="text-muted">{{ "%.2f"|format(folder.total_size() / 1024 / 1024) }} MB</small>
+                </div>
+                <div class="ms-auto">
+                    <a href="{{ url_for('files.download_zip', folder_id=folder.id) }}" class="btn btn-sm btn-outline-success me-1" title="Скачать как ZIP">
+                        <i class="bi bi-archive"></i>
+                    </a>
+                    <form method="POST" action="{{ url_for('files.delete_folder', folder_id=folder.id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить папку?')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Файлы -->
+{% if files %}
+<h4 class="mt-4">📄 Файлы</h4>
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th>Имя</th>
+            <th>Размер</th>
+            <th>Дата</th>
+            <th>Теги</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for file in files %}
+        <tr>
+            <td>{{ file.original_name }}</td>
+            <td>{{ "%.2f"|format(file.size / 1024 / 1024) }} МБ</td>
+            <td>{{ file.upload_date.strftime('%d.%m') }}</td>
+            <td>
+                {% for tag in file.tags %}
+                    <span class="badge bg-secondary">{{ tag.name }}</span>
+                {% endfor %}
+            </td>
+            <td>
+                <a href="{{ url_for('files.download_file', file_id=file.id) }}" class="btn btn-sm btn-outline-primary">Скачать</a>
+                {% if file.mime_type.startswith('text/') %}
+                <a href="{{ url_for('files.view_file', file_id=file.id) }}" class="btn btn-sm btn-outline-info">Просмотр</a>
+                {% endif %}
+                <form method="POST" action="{{ url_for('files.delete_file', file_id=file.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить?')">
+                        Удалить
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info text-center">
+    📁 Здесь пока нет файлов. Загрузите первый!
+</div>
+{% endif %}
+
+<!-- Модальное окно загрузки -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Загрузить файл</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('files.upload_file') }}" enctype="multipart/form-data">
+                {{ upload_form.hidden_tag() }}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Файл</label>
+                        <input type="file" class="form-control" name="file" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Папка</label>
+                        <select class="form-select" name="folder_id">
+                            {% for value, label in upload_form.folder_id.choices %}
+                                <option value="{{ value }}" {% if loop.first %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Теги (через запятую)</label>
+                        <input type="text" class="form-control" name="tags" placeholder="важное, фото, проект">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Загрузить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
